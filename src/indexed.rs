@@ -13,15 +13,15 @@ use serde::{Deserialize, Serialize};
 use tantivy::collector::DocSetCollector;
 use tantivy::query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, RangeQuery, TermQuery};
 use tantivy::schema::{
-    IndexRecordOption, Schema as TantivySchema, TantivyDocument, TextFieldIndexing, TextOptions,
-    Value as TantivyValue, INDEXED, STORED, STRING,
+    INDEXED, IndexRecordOption, STORED, STRING, Schema as TantivySchema, TantivyDocument,
+    TextFieldIndexing, TextOptions, Value as TantivyValue,
 };
 use tantivy::tokenizer::{NgramTokenizer, TextAnalyzer};
 use tantivy::{Index, IndexReader, IndexWriter, Term};
 
 use crate::{
-    compare_optional, matches_predicate, Document, FieldType, Predicate, ReferenceIndex, Schema,
-    SearchError, SearchRequest, SearchResults, SearchHit, Value,
+    Document, FieldType, Predicate, ReferenceIndex, Schema, SearchError, SearchHit, SearchRequest,
+    SearchResults, Value, compare_optional, matches_predicate,
 };
 
 const PREFIX: &str = "_se_";
@@ -139,12 +139,19 @@ impl TantivyIndex {
         let writer = index.writer(WRITER_MEMORY)?;
 
         Ok(Self {
-            schema, index, reader, writer, state,
+            schema,
+            index,
+            reader,
+            writer,
+            state,
         })
     }
 
     pub fn len(&self) -> usize {
-        self.state.values().filter(|record| matches!(record, Mutation::Upsert { .. })).count()
+        self.state
+            .values()
+            .filter(|record| matches!(record, Mutation::Upsert { .. }))
+            .count()
     }
 
     pub fn document(&self, id: &str) -> Option<&Document> {
@@ -159,7 +166,10 @@ impl TantivyIndex {
     }
 
     pub fn delete(&mut self, id: &str, revision: u64) -> Result<bool, IndexedError> {
-        Ok(self.apply_batch(&[Mutation::Delete { id: id.to_owned(), revision }])? > 0)
+        Ok(self.apply_batch(&[Mutation::Delete {
+            id: id.to_owned(),
+            revision,
+        }])? > 0)
     }
 
     /// Validate all changes before mutating the writer, and commit once.
@@ -279,7 +289,8 @@ impl TantivyIndex {
                     a.fields.get(&sort.field),
                     b.fields.get(&sort.field),
                     sort.descending,
-                ).then_with(|| a.id.cmp(&b.id))
+                )
+                .then_with(|| a.id.cmp(&b.id))
             });
         } else {
             matching.sort_by(|a, b| a.id.cmp(&b.id));
@@ -297,8 +308,15 @@ impl TantivyIndex {
             facets.insert((*field).to_owned(), counts);
         }
         let total = matching.len();
-        let hits = matching.into_iter().skip(request.offset).take(request.limit)
-            .map(|d| SearchHit { id: d.id, revision: d.revision }).collect();
+        let hits = matching
+            .into_iter()
+            .skip(request.offset)
+            .take(request.limit)
+            .map(|d| SearchHit {
+                id: d.id,
+                revision: d.revision,
+            })
+            .collect();
 
         Ok(FacetedResults {
             results: SearchResults { total, hits },
@@ -327,28 +345,37 @@ impl TantivyIndex {
                 };
                 Box::new(TermQuery::new(term, IndexRecordOption::Basic))
             }
-            Predicate::Exists(field) => {
-                term_query(names.get_field(PRESENCE)?, field)
-            }
+            Predicate::Exists(field) => term_query(names.get_field(PRESENCE)?, field),
             Predicate::TextContains(field, needle) => {
                 if needle.is_empty() {
                     term_query(names.get_field(PRESENCE)?, field)
                 } else {
                     let gram_field = names.get_field(&gram_name(field))?;
                     let grams = grams(&needle.to_lowercase());
-                    Box::new(BooleanQuery::new(grams.into_iter().map(|gram| (
-                        Occur::Must, term_query(gram_field, &gram)
-                    )).collect()))
+                    Box::new(BooleanQuery::new(
+                        grams
+                            .into_iter()
+                            .map(|gram| (Occur::Must, term_query(gram_field, &gram)))
+                            .collect(),
+                    ))
                 }
             }
-            Predicate::Range { field, minimum, maximum } => {
+            Predicate::Range {
+                field,
+                minimum,
+                maximum,
+            } => {
                 let f = names.get_field(field)?;
                 let to_term = |value: &Value| match value {
                     Value::Integer(v) | Value::TimestampMillis(v) => Term::from_field_i64(f, *v),
                     _ => unreachable!("validated numeric/timestamp range"),
                 };
-                let low = minimum.as_ref().map_or(Bound::Unbounded, |v| Bound::Included(to_term(v)));
-                let high = maximum.as_ref().map_or(Bound::Unbounded, |v| Bound::Included(to_term(v)));
+                let low = minimum
+                    .as_ref()
+                    .map_or(Bound::Unbounded, |v| Bound::Included(to_term(v)));
+                let high = maximum
+                    .as_ref()
+                    .map_or(Bound::Unbounded, |v| Bound::Included(to_term(v)));
                 // Two unbounded ends mean "present" rather than "all".
                 if minimum.is_none() && maximum.is_none() {
                     term_query(names.get_field(PRESENCE)?, field)
@@ -360,18 +387,24 @@ impl TantivyIndex {
                 if parts.is_empty() {
                     Box::new(AllQuery)
                 } else {
-                    Box::new(BooleanQuery::new(parts.iter().map(|p|
-                        self.query(p).map(|q| (Occur::Must, q))
-                    ).collect::<Result<Vec<_>, _>>()?))
+                    Box::new(BooleanQuery::new(
+                        parts
+                            .iter()
+                            .map(|p| self.query(p).map(|q| (Occur::Must, q)))
+                            .collect::<Result<Vec<_>, _>>()?,
+                    ))
                 }
             }
             Predicate::Or(parts) => {
                 if parts.is_empty() {
                     Box::new(EmptyQuery)
                 } else {
-                    Box::new(BooleanQuery::new(parts.iter().map(|p|
-                        self.query(p).map(|q| (Occur::Should, q))
-                    ).collect::<Result<Vec<_>, _>>()?))
+                    Box::new(BooleanQuery::new(
+                        parts
+                            .iter()
+                            .map(|p| self.query(p).map(|q| (Occur::Should, q)))
+                            .collect::<Result<Vec<_>, _>>()?,
+                    ))
                 }
             }
             Predicate::Not(child) => Box::new(BooleanQuery::new(vec![
@@ -383,16 +416,22 @@ impl TantivyIndex {
 }
 
 fn validate_revision(previous: Option<&Mutation>, next: &Mutation) -> Result<bool, SearchError> {
-    let Some(previous) = previous else { return Ok(true) };
+    let Some(previous) = previous else {
+        return Ok(true);
+    };
     let id = next.id().to_owned();
     if next.revision() < previous.revision() {
         return Err(SearchError::StaleRevision(id));
     }
     if next.revision() == previous.revision() {
         return match (previous, next) {
-            (Mutation::Upsert { document: a }, Mutation::Upsert { document: b }) if a == b => Ok(false),
+            (Mutation::Upsert { document: a }, Mutation::Upsert { document: b }) if a == b => {
+                Ok(false)
+            }
             (Mutation::Delete { .. }, Mutation::Delete { .. }) => Ok(false),
-            (Mutation::Delete { .. }, Mutation::Upsert { .. }) => Err(SearchError::StaleRevision(id)),
+            (Mutation::Delete { .. }, Mutation::Upsert { .. }) => {
+                Err(SearchError::StaleRevision(id))
+            }
             _ => Err(SearchError::ConflictingRevision(id)),
         };
     }
@@ -407,13 +446,21 @@ fn build_schema(schema: &Schema) -> TantivySchema {
     builder.add_text_field(PRESENCE, STRING);
     builder.add_u64_field(VERSION, INDEXED);
     let grams = TextOptions::default().set_indexing_options(
-        TextFieldIndexing::default().set_tokenizer(TOKENIZER)
-            .set_index_option(IndexRecordOption::Basic)
+        TextFieldIndexing::default()
+            .set_tokenizer(TOKENIZER)
+            .set_index_option(IndexRecordOption::Basic),
     );
     for (name, field_type) in &schema.fields {
         match field_type {
             FieldType::Keyword | FieldType::Text => {
-                builder.add_text_field(name, if *field_type == FieldType::Keyword { STRING } else { STORED });
+                builder.add_text_field(
+                    name,
+                    if *field_type == FieldType::Keyword {
+                        STRING
+                    } else {
+                        STORED
+                    },
+                );
                 builder.add_text_field(gram_name(name), grams.clone());
             }
             FieldType::Integer | FieldType::TimestampMillis => {
@@ -433,14 +480,23 @@ fn gram_name(field: &str) -> String {
 
 fn register_tokenizer(index: &Index) -> Result<(), IndexedError> {
     let tokenizer = NgramTokenizer::new(1, 3, false)?;
-    index.tokenizers().register(TOKENIZER, TextAnalyzer::builder(tokenizer).build());
+    index
+        .tokenizers()
+        .register(TOKENIZER, TextAnalyzer::builder(tokenizer).build());
     Ok(())
 }
 
 fn project(names: &TantivySchema, record: &Mutation) -> Result<TantivyDocument, IndexedError> {
     let mut doc = TantivyDocument::default();
     doc.add_text(names.get_field(ID)?, record.id());
-    doc.add_text(names.get_field(STATE)?, if matches!(record, Mutation::Upsert { .. }) { "live" } else { "deleted" });
+    doc.add_text(
+        names.get_field(STATE)?,
+        if matches!(record, Mutation::Upsert { .. }) {
+            "live"
+        } else {
+            "deleted"
+        },
+    );
     doc.add_text(names.get_field(PAYLOAD)?, serde_json::to_string(record)?);
     doc.add_u64(names.get_field(VERSION)?, 1);
     if let Mutation::Upsert { document } = record {
@@ -461,14 +517,18 @@ fn project(names: &TantivySchema, record: &Mutation) -> Result<TantivyDocument, 
 }
 
 fn decode(names: &TantivySchema, doc: &TantivyDocument) -> Result<Mutation, IndexedError> {
-    let value = doc.get_first(names.get_field(PAYLOAD)?)
+    let value = doc
+        .get_first(names.get_field(PAYLOAD)?)
         .and_then(|v| v.as_str())
         .ok_or_else(|| IndexedError::CorruptIndex("missing stored payload".into()))?;
     let record: Mutation = serde_json::from_str(value)?;
     Ok(record)
 }
 
-fn load_state(reader: &IndexReader, index: &Index) -> Result<BTreeMap<String, Mutation>, IndexedError> {
+fn load_state(
+    reader: &IndexReader,
+    index: &Index,
+) -> Result<BTreeMap<String, Mutation>, IndexedError> {
     let names = index.schema();
     let searcher = reader.searcher();
     let mut state = BTreeMap::new();
@@ -484,13 +544,19 @@ fn load_state(reader: &IndexReader, index: &Index) -> Result<BTreeMap<String, Mu
 }
 
 fn term_query(field: tantivy::schema::Field, text: &str) -> Box<dyn Query> {
-    Box::new(TermQuery::new(Term::from_field_text(field, text), IndexRecordOption::Basic))
+    Box::new(TermQuery::new(
+        Term::from_field_text(field, text),
+        IndexRecordOption::Basic,
+    ))
 }
 
 fn grams(text: &str) -> BTreeSet<String> {
     let chars: Vec<char> = text.chars().collect();
     let size = chars.len().min(3);
-    chars.windows(size).map(|chunk| chunk.iter().collect()).collect()
+    chars
+        .windows(size)
+        .map(|chunk| chunk.iter().collect())
+        .collect()
 }
 
 fn facet_value(value: &Value) -> String {

@@ -1,8 +1,8 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
-use serde::{Deserialize, Serialize};
 
 pub mod indexed;
 
