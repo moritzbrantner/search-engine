@@ -195,9 +195,20 @@ fn update_and_delete_are_deterministic() {
         0,
         "old indexed values must not remain",
     );
-    assert!(index.delete("same-id"));
-    assert!(!index.delete("same-id"));
+    assert!(index.delete("same-id", 5).unwrap());
+    assert!(!index.delete("same-id", 5).unwrap());
     assert!(index.is_empty());
+    assert!(matches!(
+        index.upsert(Document::new("same-id", 4)),
+        Err(SearchError::StaleRevision(_))
+    ));
+    assert!(index
+        .upsert(Document::new("same-id", 6).field("width", Value::Integer(3000)))
+        .unwrap());
+    assert!(matches!(
+        index.delete("same-id", 5),
+        Err(SearchError::StaleRevision(_))
+    ));
 }
 
 #[test]
@@ -213,4 +224,23 @@ fn rejected_documents_do_not_change_the_index() {
         Err(SearchError::EmptyDocumentId)
     ));
     assert_eq!(index.len(), before);
+}
+
+#[test]
+fn deletion_before_a_delayed_insert_retains_revision_state() {
+    let mut index = ReferenceIndex::new(schema());
+    assert!(index.delete("late-id", 10).unwrap());
+    assert!(matches!(
+        index.upsert(Document::new("late-id", 9)),
+        Err(SearchError::StaleRevision(_))
+    ));
+    assert!(matches!(
+        index.upsert(Document::new("late-id", 10)),
+        Err(SearchError::StaleRevision(_))
+    ));
+    assert!(!index.delete("late-id", 10).unwrap());
+    assert!(index
+        .upsert(Document::new("late-id", 11).field("kind", Value::Keyword("image".into())))
+        .unwrap());
+    assert_eq!(index.len(), 1);
 }

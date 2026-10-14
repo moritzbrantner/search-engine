@@ -205,6 +205,7 @@ impl Error for SearchError {}
 pub struct ReferenceIndex {
     schema: Schema,
     documents: BTreeMap<String, Document>,
+    tombstones: BTreeMap<String, u64>,
 }
 
 impl ReferenceIndex {
@@ -212,6 +213,7 @@ impl ReferenceIndex {
         Self {
             schema,
             documents: BTreeMap::new(),
+            tombstones: BTreeMap::new(),
         }
     }
 
@@ -233,6 +235,12 @@ impl ReferenceIndex {
             self.validate_value(field, value)?;
         }
 
+        if let Some(deleted_revision) = self.tombstones.get(&document.id) {
+            if document.revision <= *deleted_revision {
+                return Err(SearchError::StaleRevision(document.id));
+            }
+        }
+
         if let Some(previous) = self.documents.get(&document.id) {
             if document.revision < previous.revision {
                 return Err(SearchError::StaleRevision(document.id));
@@ -245,13 +253,34 @@ impl ReferenceIndex {
             }
         }
 
+        self.tombstones.remove(&document.id);
         self.documents.insert(document.id.clone(), document);
         Ok(true)
     }
 
-    /// Idempotently removes a derived record. Source content is not touched.
-    pub fn delete(&mut self, id: &str) -> bool {
-        self.documents.remove(id).is_some()
+    /// Records a revisioned deletion and retains its tombstone to reject late writes.
+    /// Source content is never touched; the caller supplies a monotonic revision.
+    /// Returns false for an identical tombstone replay.
+    pub fn delete(&mut self, id: &str, revision: u64) -> Result<bool, SearchError> {
+        if let Some(previous) = self.documents.get(id) {
+            if revision < previous.revision {
+                return Err(SearchError::StaleRevision(id.to_owned()));
+            }
+            if revision == previous.revision {
+                return Err(SearchError::ConflictingRevision(id.to_owned()));
+            }
+        }
+        if let Some(deleted_revision) = self.tombstones.get(id) {
+            if revision < *deleted_revision {
+                return Err(SearchError::StaleRevision(id.to_owned()));
+            }
+            if revision == *deleted_revision {
+                return Ok(false);
+            }
+        }
+        self.documents.remove(id);
+        self.tombstones.insert(id.to_owned(), revision);
+        Ok(true)
     }
 
     pub fn search(&self, request: &SearchRequest) -> Result<SearchResults, SearchError> {
