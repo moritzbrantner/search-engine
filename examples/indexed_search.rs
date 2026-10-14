@@ -23,6 +23,7 @@ fn schema() -> Schema {
         .field("captured_at", FieldType::TimestampMillis)
         .field("content", FieldType::Text)
         .field("source_uri", FieldType::Keyword)
+        .field("hidden", FieldType::Boolean)
 }
 
 fn fixture() -> Result<Vec<Document>, serde_json::Error> {
