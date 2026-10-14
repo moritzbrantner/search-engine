@@ -1,33 +1,105 @@
 # Search Engine
 
-An embeddable, domain-neutral Rust search capability for typed metadata and optional text, independent of the NLP application.
+Embeddable Rust search across consumer-owned typed metadata and optional text.
+No source file crawling, search server, NLP runtime, authorization policy, or
+canonical record database is required.
 
-## Current baseline
+## Backends
 
-This bootstrap contains a deterministic in-memory **reference oracle**, not a production persistent index. It establishes query semantics and independent tests so a Tantivy-backed implementation can be validated rather than invented. Reference queries scan O(n) records.
+- `ReferenceIndex`: O(n) reference oracle for independent correctness tests.
+- `indexed::TantivyIndex`: durable Tantivy posting-list index with
+  keyword/text/integer/boolean/timestamp-millisecond projection, nested Boolean
+  filters, exact matching, inclusive ranges, missing-field semantics, stable
+  sorting, pagination and facets.
+- Search queries return deterministic IDs and revisions; applications retain
+  source identity/URI and any user-facing presentation. For the index's
+  reconstructed projection, call `document(id)`. Source bytes remain elsewhere.
+
+A caller supplies a `Schema` and an explicit index directory. The Tantivy schema
+(including layout version) must match on reopen. Schema changes require a
+new directory and a rebuild from canonical application records.
+
+### Index lifecycle
+
+- `upsert`, `delete` and `apply_batch` commit atomically at the batch boundary.
+  Equal identical revisions are no-ops; stale/conflicting revisions fail.
+- Committed deletion tombstones survive reopen and `rebuild`. New writes at or
+  below the deletion revision cannot resurrect an obsolete source.
+- `rebuild` expects a complete caller-owned live snapshot and explicit revisioned
+  deletion events for previously active sources absent from that snapshot.
+  Previously committed tombstones may be omitted and are retained. An
+  incomplete snapshot fails before any mutation.
+- The index stores derived lifecycle records, not original file bytes. One
+  process holds the writer lock for a directory. After an ambiguous indexing
+  I/O error, discard the writer and reopen before retrying.
+- Indexable predicates use inverted postings; matching candidate documents
+  are materialized for exact substring verification, sorting and facet counts.
+  Text contains uses Unicode lowercase and 1–3 character ngrams, with exact
+  substring verification to avoid trigram false positives. Keyword equality
+  and stable IDs are case-sensitive. No stemming, relevance ranking or
+  linguistic inference is implied.
+- `SearchWork.candidate_documents` counts materialized posting-list
+  candidates, **not** Tantivy's internal term enumeration or total CPU work.
+  Unselective queries can still visit the full corpus.
+- Maximum page size is 1,000 and maximum offset is 1,000,000.
+
+## Local CLI acceptance
+
+The committed `fixtures/mixed-files.json` contains source-backed file
+projections with distinct creation, modification and capture timestamps,
+pixel dimensions, extension/MIME, path and optional content. Missing metadata
+is absent, never filled using other timestamps.
 
 ```sh
 cargo test --locked
 cargo run --locked --example metadata_search
+
+INDEX="$(mktemp -d)"
+cargo run --locked --example indexed_search -- "$INDEX" ingest
+cargo run --locked --example indexed_search -- "$INDEX" query alpine
+cargo run --locked --example indexed_search -- "$INDEX" mutate
+cargo run --locked --example indexed_search -- "$INDEX" query
+cargo run --locked --example indexed_search -- "$INDEX" rebuild
+cargo run --locked --example indexed_search -- "$INDEX" query
+
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
 ```
 
-The example filters images by file type, pixel width/height, capture date and text. There is no model download, database, network service or sibling checkout.
+The CLI emits JSON with input predicate, stable source IDs, indexed metadata,
+facets and candidate counters. Each invocation opens/closes the persistent
+index so the sequence verifies actual restart behavior.
 
-## Boundaries
+## Measurements
 
-- **Search Engine:** typed indexed-document projections, mechanical query/range/boolean logic, lexical search, facets, pagination, index updates and reusable backend adapters.
-- **Applications:** canonical assets and metadata, source ingestion, permissions, UI, and index lifecycle policy. Indexes are reconstructible derived state.
-- **[Moenarch Foundation](https://github.com/moritzbrantner/moenarch-foundation):** corpus identity and provenance contracts.
-- **[rust-kernels](https://github.com/moritzbrantner/rust-kernels):** reusable selection and similarity algorithms.
-- **[nlp-stack](https://github.com/moritzbrantner/nlp-stack):** linguistic analysis, model-backed embeddings and NLP-specific relevance; never required for metadata filtering.
-- **[media-intelligence](https://github.com/moritzbrantner/media-intelligence):** modality alignment and evidence/result fusion, not generic search storage.
+```sh
+cargo run --release --locked --example bench_indexed
+```
 
-The first production index backend should evaluate [Tantivy](https://github.com/quickwit-oss/tantivy) against the reference oracle. SQLite, Postgres and Qdrant may remain application-owned databases. No central/global search service is required.
+The named synthetic workloads use 100, 1,000 and 5,000 records. Output includes
+actual wall-clock indexing time, index query time, O(n) reference time,
+candidate counts, OS, architecture and build profile. These single-run
+measurements are **informational**, not portable performance guarantees or
+blocking CI timing budgets. The focused candidate-count regression lives in
+`tests/tantivy_index.rs`.
 
-## Authority
+## Boundaries and authority
 
-[Decision Atlas](docs/DECISION-ATLAS.md) records product decisions separately from implementation. Related bootstrap goal: [Media Intelligence #35](https://github.com/moritzbrantner/media-intelligence/issues/35). Follow-up implementation issues belong in this repository.
+- Search Engine: typed projections, posting-list retrieval, Boolean/range
+  mechanics, sorting, facets and durable rebuildable index lifecycle.
+- Applications: canonical assets/metadata, permissions, ingestion, UI,
+  index lifecycle policy and source provenance identity.
+- [Moenarch Foundation](https://github.com/moritzbrantner/moenarch-foundation):
+  shared corpus identity/provenance.
+- [rust-kernels](https://github.com/moritzbrantner/rust-kernels):
+  lower-level reusable algorithms.
+- [nlp-stack](https://github.com/moritzbrantner/nlp-stack):
+  linguistic/embedding capabilities; not needed for metadata filtering.
+- [media-intelligence](https://github.com/moritzbrantner/media-intelligence):
+  multimodal evidence alignment and fusion.
 
-`conventions.json` selects live `rust-performance` policy; no managed `.conventions/` cache or convention lock was present when this empty repository was initialized. Install those only through `coding-tooling conventions update`, not by hand.
+The [Decision Atlas](docs/DECISION-ATLAS.md) records approved owner intent,
+separate from implementation and acceptance. `conventions.json`
+selects live `rust-performance`. Generate managed policy files only through
+`coding-tooling conventions update`, and verify with
+`coding-tooling conventions check`. Repository instructions: [AGENTS.md](AGENTS.md).
