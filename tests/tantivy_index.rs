@@ -340,3 +340,52 @@ fn invalid_query_and_page_bounds_report_errors() {
         Err(IndexedError::InvalidPage)
     ));
 }
+
+#[test]
+fn negated_text_queries_do_not_drop_ngram_false_positives() {
+    let temp = tempdir().unwrap();
+    // Both texts have the "abc" and "bcd" trigrams, but only one
+    // contains the uninterrupted "abcd" substring.
+    let docs = vec![
+        Document::new("false-positive", 1)
+            .field("filename", Value::Text("abcXbcd".into())),
+        Document::new("matching", 1)
+            .field("filename", Value::Text("abcd".into())),
+        Document::new("unrelated", 1)
+            .field("kind", Value::Keyword("document".into()))
+            .field("filename", Value::Text("other".into())),
+        Document::new("missing", 1),
+    ];
+    let mut index = TantivyIndex::open(temp.path(), schema()).unwrap();
+    let reference = reference(&docs);
+    index
+        .apply_batch(
+            &docs
+                .iter()
+                .cloned()
+                .map(|document| Mutation::Upsert { document })
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+    let contains = Predicate::TextContains("filename".into(), "abcd".into());
+    let exact = Predicate::Equals("filename".into(), Value::Text("abcd".into()));
+    assert_same(
+        &reference,
+        &index,
+        &[
+            request(Predicate::Not(Box::new(contains.clone()))),
+            request(Predicate::Not(Box::new(exact.clone()))),
+            request(Predicate::Not(Box::new(Predicate::And(vec![
+                Predicate::Equals("kind".into(), Value::Keyword("document".into())),
+                contains.clone(),
+            ])))),
+            request(Predicate::Or(vec![
+                Predicate::Not(Box::new(contains.clone())),
+                Predicate::Equals("kind".into(), Value::Keyword("document".into())),
+            ])),
+            request(Predicate::Not(Box::new(Predicate::Not(Box::new(
+                contains,
+            ))))),
+        ],
+    );
+}
