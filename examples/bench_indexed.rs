@@ -73,7 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "candidate_documents":indexed_result.work.candidate_documents,
                 "target_os":std::env::consts::OS,
                 "target_arch":std::env::consts::ARCH,
-                "build_profile":"release",
+                "build_profile":if cfg!(debug_assertions) { "dev" } else { "release" },
                 "note":"single-run wall clock; informational, not a portable latency guarantee"
             })
         );
