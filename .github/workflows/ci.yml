@@ -14,7 +14,32 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: Validate managed convention installation
+        shell: bash
+        run: |
+          git clone --quiet --depth 1 https://github.com/moritzbrantner/coding-tooling.git /tmp/coding-tooling
+          (cd /tmp/coding-tooling && bun install --frozen-lockfile)
+          bun /tmp/coding-tooling/src/cli.ts conventions check --root "$GITHUB_WORKSPACE"
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test --locked
       - run: cargo run --locked --example metadata_search
+      - name: Exercise durable CLI across process restarts
+        shell: bash
+        run: |
+          INDEX="$(mktemp -d)"
+          trap 'rm -rf "$INDEX"' EXIT
+          cargo run --locked --example indexed_search -- "$INDEX" ingest
+          cargo run --locked --example indexed_search -- "$INDEX" query alpine > /tmp/search-initial.json
+          jq -e '.matches.total == 1 and .matches.hits[0].id == "alpine-4k" and .matches.hits[0].revision == 1 and .facets.kind.image == 1 and .records[0].fields.source_uri.value == "file:///library/photos/2025/alpine-sunrise.jpg"' /tmp/search-initial.json
+          cargo run --locked --example indexed_search -- "$INDEX" mutate
+          cargo run --locked --example indexed_search -- "$INDEX" query alpine > /tmp/search-updated.json
+          jq -e '.matches.total == 1 and .matches.hits[0].id == "alpine-4k" and .matches.hits[0].revision == 2' /tmp/search-updated.json
+          cargo run --locked --example indexed_search -- "$INDEX" rebuild
+          cargo run --locked --example indexed_search -- "$INDEX" query alpine > /tmp/search-rebuilt.json
+          jq -e '.matches == input.matches and .facets == input.facets' /tmp/search-rebuilt.json /tmp/search-updated.json
+      - name: Informational index/reference work and timings
+        run: cargo run --locked --example bench_indexed
