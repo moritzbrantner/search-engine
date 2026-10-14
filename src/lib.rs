@@ -1,7 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
+
+pub mod indexed;
 
 /// The declared type of a field in a searchable projection.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -14,7 +17,8 @@ pub enum FieldType {
 }
 
 /// A typed field value; absent fields are distinct from every concrete value.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum Value {
     Keyword(String),
     Text(String),
@@ -57,7 +61,7 @@ impl Schema {
 }
 
 /// One derived search record with an application-provided stable ID and revision.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Document {
     pub id: String,
     pub revision: u64,
@@ -136,13 +140,13 @@ impl SearchRequest {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct SearchHit {
     pub id: String,
     pub revision: u64,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct SearchResults {
     pub total: usize,
     pub hits: Vec<SearchHit>,
