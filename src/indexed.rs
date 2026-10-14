@@ -453,15 +453,12 @@ fn build_schema(schema: &Schema) -> TantivySchema {
     for (name, field_type) in &schema.fields {
         match field_type {
             FieldType::Keyword | FieldType::Text => {
-                builder.add_text_field(
-                    name,
-                    if *field_type == FieldType::Keyword {
-                        STRING
-                    } else {
-                        STORED
-                    },
-                );
-                builder.add_text_field(gram_name(name), grams.clone());
+                if *field_type == FieldType::Keyword {
+                    builder.add_text_field(name, STRING);
+                } else {
+                    builder.add_text_field(name, STORED);
+                }
+                builder.add_text_field(&gram_name(name), grams.clone());
             }
             FieldType::Integer | FieldType::TimestampMillis => {
                 builder.add_i64_field(name, INDEXED);
