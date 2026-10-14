@@ -1,0 +1,11 @@
+[package]
+name = "search-engine"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "Rust typed search contracts and deterministic correctness oracle"
+repository = "https://github.com/moritzbrantner/search-engine"
+publish = false
+
+[dependencies]

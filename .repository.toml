@@ -1,0 +1,19 @@
+schema_version = 1
+id = "moritzbrantner/search-engine"
+kind = "library"
+status = "active"
+summary = "Domain-neutral Rust metadata and text search contracts, indexed projections and reusable adapters."
+depends_on = []
+consumed_by = []
+supersedes = []
+replaced_by = []
+
+[architecture]
+owns = ["search-engine/typed-query", "search-engine/metadata-index", "search-engine/lexical-retrieval", "search-engine/index-lifecycle"]
+consumes = []
+must_not_own = ["moenarch-foundation/corpus-identity", "nlp-stack/linguistic-analysis", "media-intelligence/multimodal-evidence", "consumer/canonical-assets", "consumer/access-policy", "consumer/search-ui"]
+
+[bootstrap]
+command = ["cargo", "build", "--locked"]
+check = ["cargo", "test", "--locked"]
+timeout_seconds = 600
