@@ -1,0 +1,224 @@
+[
+  {
+    "id": "alpine-4k",
+    "revision": 1,
+    "fields": {
+      "kind": {
+        "type": "keyword",
+        "value": "image"
+      },
+      "filename": {
+        "type": "text",
+        "value": "alpine-sunrise.jpg"
+      },
+      "path": {
+        "type": "keyword",
+        "value": "photos/2025/alpine-sunrise.jpg"
+      },
+      "mime": {
+        "type": "keyword",
+        "value": "image/jpeg"
+      },
+      "extension": {
+        "type": "keyword",
+        "value": "jpg"
+      },
+      "size": {
+        "type": "integer",
+        "value": 7832451
+      },
+      "width": {
+        "type": "integer",
+        "value": 3840
+      },
+      "height": {
+        "type": "integer",
+        "value": 2160
+      },
+      "captured_at": {
+        "type": "timestamp_millis",
+        "value": 1735689600000
+      },
+      "modified_at": {
+        "type": "timestamp_millis",
+        "value": 1735700000000
+      },
+      "source_uri": {
+        "type": "keyword",
+        "value": "file:///library/photos/2025/alpine-sunrise.jpg"
+      }
+    }
+  },
+  {
+    "id": "city-hd",
+    "revision": 1,
+    "fields": {
+      "kind": {
+        "type": "keyword",
+        "value": "image"
+      },
+      "filename": {
+        "type": "text",
+        "value": "city-sunset.png"
+      },
+      "path": {
+        "type": "keyword",
+        "value": "photos/city-sunset.png"
+      },
+      "mime": {
+        "type": "keyword",
+        "value": "image/png"
+      },
+      "extension": {
+        "type": "keyword",
+        "value": "png"
+      },
+      "size": {
+        "type": "integer",
+        "value": 4300020
+      },
+      "width": {
+        "type": "integer",
+        "value": 1280
+      },
+      "height": {
+        "type": "integer",
+        "value": 720
+      },
+      "source_uri": {
+        "type": "keyword",
+        "value": "file:///library/photos/city-sunset.png"
+      }
+    }
+  },
+  {
+    "id": "old-4k",
+    "revision": 1,
+    "fields": {
+      "kind": {
+        "type": "keyword",
+        "value": "image"
+      },
+      "filename": {
+        "type": "text",
+        "value": "mountain-archive.jpg"
+      },
+      "path": {
+        "type": "keyword",
+        "value": "archive/mountain-archive.jpg"
+      },
+      "mime": {
+        "type": "keyword",
+        "value": "image/jpeg"
+      },
+      "extension": {
+        "type": "keyword",
+        "value": "jpg"
+      },
+      "width": {
+        "type": "integer",
+        "value": 4096
+      },
+      "height": {
+        "type": "integer",
+        "value": 2160
+      },
+      "created_at": {
+        "type": "timestamp_millis",
+        "value": 1750000000000
+      },
+      "captured_at": {
+        "type": "timestamp_millis",
+        "value": 1600000000000
+      },
+      "source_uri": {
+        "type": "keyword",
+        "value": "file:///library/archive/mountain-archive.jpg"
+      }
+    }
+  },
+  {
+    "id": "handbook",
+    "revision": 1,
+    "fields": {
+      "kind": {
+        "type": "keyword",
+        "value": "document"
+      },
+      "filename": {
+        "type": "text",
+        "value": "Rust search handbook.pdf"
+      },
+      "path": {
+        "type": "keyword",
+        "value": "documents/search-handbook.pdf"
+      },
+      "mime": {
+        "type": "keyword",
+        "value": "application/pdf"
+      },
+      "extension": {
+        "type": "keyword",
+        "value": "pdf"
+      },
+      "size": {
+        "type": "integer",
+        "value": 192000
+      },
+      "content": {
+        "type": "text",
+        "value": "Index file metadata, exact filters and searchable transcribed text."
+      },
+      "source_uri": {
+        "type": "keyword",
+        "value": "file:///library/documents/search-handbook.pdf"
+      }
+    }
+  },
+  {
+    "id": "lecture",
+    "revision": 1,
+    "fields": {
+      "kind": {
+        "type": "keyword",
+        "value": "video"
+      },
+      "filename": {
+        "type": "text",
+        "value": "Search Systems Lecture.mp4"
+      },
+      "path": {
+        "type": "keyword",
+        "value": "video/search-systems.mp4"
+      },
+      "mime": {
+        "type": "keyword",
+        "value": "video/mp4"
+      },
+      "extension": {
+        "type": "keyword",
+        "value": "mp4"
+      },
+      "size": {
+        "type": "integer",
+        "value": 91000000
+      },
+      "width": {
+        "type": "integer",
+        "value": 1920
+      },
+      "height": {
+        "type": "integer",
+        "value": 1080
+      },
+      "content": {
+        "type": "text",
+        "value": "A transcript on durable inverted indexes"
+      },
+      "source_uri": {
+        "type": "keyword",
+        "value": "file:///library/video/search-systems.mp4"
+      }
+    }
+  }
+]
