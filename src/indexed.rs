@@ -411,11 +411,38 @@ impl TantivyIndex {
                     ))
                 }
             }
-            Predicate::Not(child) => Box::new(BooleanQuery::new(vec![
-                (Occur::Must, Box::new(AllQuery) as Box<dyn Query>),
-                (Occur::MustNot, self.query(child)?),
-            ])),
+            Predicate::Not(child) => {
+                if contains_approximate_text(child, &self.schema) {
+                    // Gram matches are only a superset of substring matches.
+                    // Negating such a query would drop legitimate candidates.
+                    // Include all live records and defer exclusion to the
+                    // exact reference predicate applied to each candidate.
+                    Box::new(AllQuery)
+                } else {
+                    Box::new(BooleanQuery::new(vec![
+                        (Occur::Must, Box::new(AllQuery) as Box<dyn Query>),
+                        (Occur::MustNot, self.query(child)?),
+                    ]))
+                }
+            }
         })
+    }
+}
+
+// Whether Tantivy uses a gram-based, potentially false-positive candidate
+// predicate anywhere in an expression. Under NOT, a superset cannot safely
+// become an exclusion set.
+fn contains_approximate_text(predicate: &Predicate, schema: &Schema) -> bool {
+    match predicate {
+        Predicate::TextContains(_, _) => true,
+        Predicate::Equals(field, Value::Text(_)) => {
+            schema.field_type(field) == Some(FieldType::Text)
+        }
+        Predicate::And(children) | Predicate::Or(children) => {
+            children.iter().any(|child| contains_approximate_text(child, schema))
+        }
+        Predicate::Not(child) => contains_approximate_text(child, schema),
+        _ => false,
     }
 }
 
