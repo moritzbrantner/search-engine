@@ -347,10 +347,8 @@ fn negated_text_queries_do_not_drop_ngram_false_positives() {
     // Both texts have the "abc" and "bcd" trigrams, but only one
     // contains the uninterrupted "abcd" substring.
     let docs = vec![
-        Document::new("false-positive", 1)
-            .field("filename", Value::Text("abcXbcd".into())),
-        Document::new("matching", 1)
-            .field("filename", Value::Text("abcd".into())),
+        Document::new("false-positive", 1).field("filename", Value::Text("abcXbcd".into())),
+        Document::new("matching", 1).field("filename", Value::Text("abcd".into())),
         Document::new("unrelated", 1)
             .field("kind", Value::Keyword("document".into()))
             .field("filename", Value::Text("other".into())),
@@ -383,9 +381,7 @@ fn negated_text_queries_do_not_drop_ngram_false_positives() {
                 Predicate::Not(Box::new(contains.clone())),
                 Predicate::Equals("kind".into(), Value::Keyword("document".into())),
             ])),
-            request(Predicate::Not(Box::new(Predicate::Not(Box::new(
-                contains,
-            ))))),
+            request(Predicate::Not(Box::new(Predicate::Not(Box::new(contains))))),
         ],
     );
 }
