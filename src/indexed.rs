@@ -154,6 +154,10 @@ impl TantivyIndex {
             .count()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn document(&self, id: &str) -> Option<&Document> {
         match self.state.get(id) {
             Some(Mutation::Upsert { document }) => Some(document),
