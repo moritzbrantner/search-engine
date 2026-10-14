@@ -11,7 +11,7 @@ This file records approved product intent, **not implementation**. Engineering d
 
 ## 1. Ownership
 
-- **1.1 [ ] Decision — Independent Rust search capability.**  
+- **1.1 [x] Decision — Independent Rust search capability.**  
   Status: adopted 2026-10-14.  
   Generic search lives in its own repository. Typed file metadata search must work without NLP, model runtimes or a search server.
 
@@ -25,25 +25,25 @@ This file records approved product intent, **not implementation**. Engineering d
 
 ## 2. Query capabilities
 
-- **2.1 [ ] Decision — Structured metadata is first-class searchable data.**  
+- **2.1 [x] Decision — Structured metadata is first-class searchable data.**  
   Status: adopted 2026-10-14.  
   Query filenames, paths, types, sizes, timestamps and image pixel dimensions, along with other available typed metadata. Support combinations of exact, numeric/temporal range, Boolean and text conditions, with stable sorting.
 
-- **2.2 [ ] Decision — Text retrieval is optional.**  
+- **2.2 [x] Decision — Text retrieval is optional.**  
   Status: adopted 2026-10-14.  
   A metadata-only corpus is useful by itself. Source text, OCR/transcripts and optional semantic results can extend search without making linguistic processing foundational.
 
-- **2.3 [ ] Decision — Preserve meaning of fields and missing values.**  
+- **2.3 [x] Decision — Preserve meaning of fields and missing values.**  
   Status: adopted 2026-10-14 as a correctness requirement for 2.1.  
   Filesystem creation time, filesystem modification time and EXIF capture time have distinct identities. Unsupported or unavailable fields remain absent, not fabricated. Hits retain stable source references.
 
 ## 3. Index lifecycle
 
-- **3.1 [ ] Decision — Deterministic incremental and rebuildable projections.**  
+- **3.1 [x] Decision — Deterministic incremental and rebuildable projections.**  
   Status: adopted 2026-10-14.  
   Repeated indexing of unchanged sources does not duplicate hits. Updates/deletions replace stale indexed data. Rebuilding from authoritative records must be possible, and partial/failed indexing must be explicit.
 
-- **3.2 [ ] Decision — Embeddable library first.**  
+- **3.2 [x] Decision — Embeddable library first.**  
   Status: adopted 2026-10-14.  
   The Rust library can be consumed without a mandatory service, deployment or shared storage. CLI/headless acceptance is valid for the capability; optional WASM/server/UI adapters need actual consumers.
 
