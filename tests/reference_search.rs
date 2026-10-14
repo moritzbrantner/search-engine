@@ -202,9 +202,11 @@ fn update_and_delete_are_deterministic() {
         index.upsert(Document::new("same-id", 4)),
         Err(SearchError::StaleRevision(_))
     ));
-    assert!(index
-        .upsert(Document::new("same-id", 6).field("width", Value::Integer(3000)))
-        .unwrap());
+    assert!(
+        index
+            .upsert(Document::new("same-id", 6).field("width", Value::Integer(3000)))
+            .unwrap()
+    );
     assert!(matches!(
         index.delete("same-id", 5),
         Err(SearchError::StaleRevision(_))
@@ -239,8 +241,10 @@ fn deletion_before_a_delayed_insert_retains_revision_state() {
         Err(SearchError::StaleRevision(_))
     ));
     assert!(!index.delete("late-id", 10).unwrap());
-    assert!(index
-        .upsert(Document::new("late-id", 11).field("kind", Value::Keyword("image".into())))
-        .unwrap());
+    assert!(
+        index
+            .upsert(Document::new("late-id", 11).field("kind", Value::Keyword("image".into())))
+            .unwrap()
+    );
     assert_eq!(index.len(), 1);
 }
