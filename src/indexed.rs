@@ -4,7 +4,6 @@
 //! owns the directory; committed lifecycle records (including tombstones) survive
 //! process restarts. Search evaluates postings before reading candidate records.
 
-use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::ops::Bound;
@@ -315,10 +314,14 @@ impl TantivyIndex {
         let names = self.index.schema();
         Ok(match predicate {
             Predicate::All => Box::new(AllQuery),
+            Predicate::Equals(field, Value::Text(value)) => {
+                self.query(&Predicate::TextContains(field.clone(), value.clone()))?
+            }
             Predicate::Equals(field, value) => {
                 let f = names.get_field(field)?;
                 let term = match value {
-                    Value::Keyword(v) | Value::Text(v) => Term::from_field_text(f, v),
+                    Value::Keyword(v) => Term::from_field_text(f, v),
+                    Value::Text(_) => unreachable!("text equality handled above"),
                     Value::Integer(v) | Value::TimestampMillis(v) => Term::from_field_i64(f, *v),
                     Value::Boolean(v) => Term::from_field_bool(f, *v),
                 };
@@ -333,9 +336,9 @@ impl TantivyIndex {
                 } else {
                     let gram_field = names.get_field(&gram_name(field))?;
                     let grams = grams(&needle.to_lowercase());
-                    BooleanQuery::new(grams.into_iter().map(|gram| (
+                    Box::new(BooleanQuery::new(grams.into_iter().map(|gram| (
                         Occur::Must, term_query(gram_field, &gram)
-                    )).collect()).into()
+                    )).collect()))
                 }
             }
             Predicate::Range { field, minimum, maximum } => {
@@ -410,7 +413,7 @@ fn build_schema(schema: &Schema) -> TantivySchema {
     for (name, field_type) in &schema.fields {
         match field_type {
             FieldType::Keyword | FieldType::Text => {
-                builder.add_text_field(name, STRING);
+                builder.add_text_field(name, if *field_type == FieldType::Keyword { STRING } else { STORED });
                 builder.add_text_field(gram_name(name), grams.clone());
             }
             FieldType::Integer | FieldType::TimestampMillis => {
