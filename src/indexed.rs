@@ -438,9 +438,9 @@ fn contains_approximate_text(predicate: &Predicate, schema: &Schema) -> bool {
         Predicate::Equals(field, Value::Text(_)) => {
             schema.field_type(field) == Some(FieldType::Text)
         }
-        Predicate::And(children) | Predicate::Or(children) => {
-            children.iter().any(|child| contains_approximate_text(child, schema))
-        }
+        Predicate::And(children) | Predicate::Or(children) => children
+            .iter()
+            .any(|child| contains_approximate_text(child, schema)),
         Predicate::Not(child) => contains_approximate_text(child, schema),
         _ => false,
     }
