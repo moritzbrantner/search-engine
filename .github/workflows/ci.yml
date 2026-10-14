@@ -19,7 +19,7 @@ jobs:
           components: rustfmt, clippy
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.2
+          bun-version: 1.4.3
       - name: Validate managed convention installation
         shell: bash
         run: |
