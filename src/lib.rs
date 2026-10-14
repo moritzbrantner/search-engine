@@ -173,12 +173,18 @@ impl fmt::Display for SearchError {
                 field,
                 expected,
                 actual,
-            } => write!(f, "wrong type for {field}: expected {expected:?}, got {actual:?}"),
+            } => write!(
+                f,
+                "wrong type for {field}: expected {expected:?}, got {actual:?}"
+            ),
             Self::UnsupportedTextField(field) => {
                 write!(f, "text search requires a text or keyword field: {field}")
             }
             Self::UnsupportedRangeField(field) => {
-                write!(f, "range search requires an integer or timestamp field: {field}")
+                write!(
+                    f,
+                    "range search requires an integer or timestamp field: {field}"
+                )
             }
             Self::InvalidRange(field) => write!(f, "lower bound exceeds upper bound: {field}"),
             Self::StaleRevision(id) => write!(f, "stale revision for document: {id}"),
@@ -332,10 +338,10 @@ impl ReferenceIndex {
                 if let Some(value) = maximum {
                     self.validate_value(field, value)?;
                 }
-                if let (Some(left), Some(right)) = (minimum, maximum)
-                    && compare_values(left, right) == Some(Ordering::Greater)
-                {
-                    return Err(SearchError::InvalidRange(field.clone()));
+                if let (Some(left), Some(right)) = (minimum, maximum) {
+                    if compare_values(left, right) == Some(Ordering::Greater) {
+                        return Err(SearchError::InvalidRange(field.clone()));
+                    }
                 }
                 Ok(())
             }
@@ -388,9 +394,7 @@ fn matches_predicate(document: &Document, predicate: &Predicate) -> bool {
 
 fn compare_values(left: &Value, right: &Value) -> Option<Ordering> {
     match (left, right) {
-        (Value::Keyword(a), Value::Keyword(b)) | (Value::Text(a), Value::Text(b)) => {
-            Some(a.cmp(b))
-        }
+        (Value::Keyword(a), Value::Keyword(b)) | (Value::Text(a), Value::Text(b)) => Some(a.cmp(b)),
         (Value::Integer(a), Value::Integer(b))
         | (Value::TimestampMillis(a), Value::TimestampMillis(b)) => Some(a.cmp(b)),
         (Value::Boolean(a), Value::Boolean(b)) => Some(a.cmp(b)),

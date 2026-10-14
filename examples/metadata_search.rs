@@ -1,6 +1,4 @@
-use search_engine::{
-    Document, FieldType, Predicate, ReferenceIndex, Schema, SearchRequest, Value,
-};
+use search_engine::{Document, FieldType, Predicate, ReferenceIndex, Schema, SearchRequest, Value};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schema = Schema::new()

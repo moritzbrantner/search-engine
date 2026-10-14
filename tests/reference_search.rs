@@ -87,11 +87,19 @@ fn sorts_stably_and_keeps_absent_values_last() {
     let result = index.search(&request).expect("valid query");
     assert_eq!(result.total, 3);
     assert_eq!(
-        result.hits.iter().map(|hit| hit.id.as_str()).collect::<Vec<_>>(),
+        result
+            .hits
+            .iter()
+            .map(|hit| hit.id.as_str())
+            .collect::<Vec<_>>(),
         vec!["recent-image", "old-image"],
     );
     let tail = index
-        .search(&SearchRequest::new(Predicate::All).sort_by("captured_at", true).page(2, 3))
+        .search(
+            &SearchRequest::new(Predicate::All)
+                .sort_by("captured_at", true)
+                .page(2, 3),
+        )
         .expect("valid query");
     assert_eq!(tail.hits[0].id, "text");
 }
@@ -124,11 +132,17 @@ fn supports_boolean_text_and_missing_value_predicates() {
 fn rejects_incompatible_queries_and_invalid_ranges() {
     let index = fixture();
     assert!(matches!(
-        index.search(&SearchRequest::new(min_value("width", Value::Text("1920".into())))),
+        index.search(&SearchRequest::new(min_value(
+            "width",
+            Value::Text("1920".into())
+        ))),
         Err(SearchError::WrongType { .. })
     ));
     assert!(matches!(
-        index.search(&SearchRequest::new(Predicate::TextContains("width".into(), "a".into()))),
+        index.search(&SearchRequest::new(Predicate::TextContains(
+            "width".into(),
+            "a".into()
+        ))),
         Err(SearchError::UnsupportedTextField(_))
     ));
     assert!(matches!(
@@ -140,7 +154,9 @@ fn rejects_incompatible_queries_and_invalid_ranges() {
         Err(SearchError::InvalidRange(_))
     ));
     assert!(matches!(
-        index.search(&SearchRequest::new(Predicate::Exists("unregistered".into()))),
+        index.search(&SearchRequest::new(Predicate::Exists(
+            "unregistered".into()
+        ))),
         Err(SearchError::UnknownField(_))
     ));
 }
@@ -150,7 +166,10 @@ fn update_and_delete_are_deterministic() {
     let mut index = ReferenceIndex::new(schema());
     let doc = Document::new("same-id", 3).field("width", Value::Integer(2560));
     assert!(index.upsert(doc.clone()).unwrap());
-    assert!(!index.upsert(doc).unwrap(), "identical replay must not duplicate");
+    assert!(
+        !index.upsert(doc).unwrap(),
+        "identical replay must not duplicate"
+    );
     assert!(matches!(
         index.upsert(Document::new("same-id", 2)),
         Err(SearchError::StaleRevision(_))
@@ -159,11 +178,18 @@ fn update_and_delete_are_deterministic() {
         index.upsert(Document::new("same-id", 3).field("width", Value::Integer(1920))),
         Err(SearchError::ConflictingRevision(_))
     ));
-    assert!(index.upsert(Document::new("same-id", 4).field("width", Value::Integer(1920))).unwrap());
+    assert!(
+        index
+            .upsert(Document::new("same-id", 4).field("width", Value::Integer(1920)))
+            .unwrap()
+    );
     assert_eq!(index.len(), 1);
     assert_eq!(
         index
-            .search(&SearchRequest::new(min_value("width", Value::Integer(2000))))
+            .search(&SearchRequest::new(min_value(
+                "width",
+                Value::Integer(2000)
+            )))
             .unwrap()
             .total,
         0,
