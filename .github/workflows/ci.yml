@@ -40,6 +40,6 @@ jobs:
           jq -e '.matches.total == 1 and .matches.hits[0].id == "alpine-4k" and .matches.hits[0].revision == 2' /tmp/search-updated.json
           cargo run --locked --example indexed_search -- "$INDEX" rebuild
           cargo run --locked --example indexed_search -- "$INDEX" query alpine > /tmp/search-rebuilt.json
-          jq -e '.matches == input.matches and .facets == input.facets' /tmp/search-rebuilt.json /tmp/search-updated.json
+          jq -s -e '.[0].matches == .[1].matches and .[0].facets == .[1].facets' /tmp/search-rebuilt.json /tmp/search-updated.json
       - name: Informational index/reference work and timings
         run: cargo run --locked --example bench_indexed
