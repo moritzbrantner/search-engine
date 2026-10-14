@@ -88,6 +88,10 @@
       "source_uri": {
         "type": "keyword",
         "value": "file:///library/photos/city-sunset.png"
+      },
+      "hidden": {
+        "type": "boolean",
+        "value": false
       }
     }
   },
@@ -218,6 +222,10 @@
       "source_uri": {
         "type": "keyword",
         "value": "file:///library/video/search-systems.mp4"
+      },
+      "hidden": {
+        "type": "boolean",
+        "value": true
       }
     }
   }
