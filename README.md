@@ -25,6 +25,9 @@ new directory and a rebuild from canonical application records.
   Equal identical revisions are no-ops; stale/conflicting revisions fail.
 - Committed deletion tombstones survive reopen and `rebuild`. New writes at or
   below the deletion revision cannot resurrect an obsolete source.
+  `latest_revision(id)` reads the committed revision of either a live record or a
+  deletion tombstone; unknown IDs return `None`. This is the caller-supplied index
+  revision, not a source-file version discovered by the engine.
 - `rebuild` expects a complete caller-owned live snapshot and explicit revisioned
   deletion events for previously active sources absent from that snapshot.
   Previously committed tombstones may be omitted and are retained. An

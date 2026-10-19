@@ -385,3 +385,47 @@ fn negated_text_queries_do_not_drop_ngram_false_positives() {
         ],
     );
 }
+
+#[test]
+fn latest_revision_includes_committed_deletions_across_restart_and_rebuild() {
+    let directory = tempdir().unwrap();
+    let mut index = TantivyIndex::open(directory.path(), schema()).unwrap();
+    assert_eq!(index.latest_revision("source"), None);
+    index.upsert(Document::new("source", 7)).unwrap();
+    assert_eq!(index.latest_revision("source"), Some(7));
+    assert!(index.upsert(Document::new("source", 6)).is_err());
+    assert_eq!(index.latest_revision("source"), Some(7));
+
+    index.delete("source", 8).unwrap();
+    assert_eq!(index.latest_revision("source"), Some(8));
+    assert!(index.document("source").is_none());
+    drop(index);
+
+    let mut index = TantivyIndex::open(directory.path(), schema()).unwrap();
+    assert_eq!(index.latest_revision("source"), Some(8));
+    assert!(index.upsert(Document::new("source", 8)).is_err());
+    index.rebuild(&[]).unwrap();
+    assert_eq!(index.latest_revision("source"), Some(8));
+    index.upsert(Document::new("source", 9)).unwrap();
+    assert_eq!(index.latest_revision("source"), Some(9));
+
+    assert!(
+        index
+            .upsert(Document::new("source", 9).field("kind", Value::Keyword("image".into())))
+            .is_err()
+    );
+    assert!(
+        index
+            .apply_batch(&[
+                Mutation::Upsert {
+                    document: Document::new("source", 10),
+                },
+                Mutation::Upsert {
+                    document: Document::new("invalid", 1).field("undeclared", Value::Boolean(true)),
+                },
+            ])
+            .is_err()
+    );
+    assert_eq!(index.latest_revision("source"), Some(9));
+    assert_eq!(index.latest_revision("invalid"), None);
+}
