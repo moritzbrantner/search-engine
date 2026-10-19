@@ -158,6 +158,13 @@ impl TantivyIndex {
         self.len() == 0
     }
 
+    /// Latest committed caller-provided revision, including deletion tombstones.
+    ///
+    /// Unknown IDs return `None`. Rejected mutations do not change this value.
+    pub fn latest_revision(&self, id: &str) -> Option<u64> {
+        self.state.get(id).map(Mutation::revision)
+    }
+
     pub fn document(&self, id: &str) -> Option<&Document> {
         match self.state.get(id) {
             Some(Mutation::Upsert { document }) => Some(document),
